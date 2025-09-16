@@ -1,0 +1,2 @@
+# liteMineSweeper
+mainly for study
