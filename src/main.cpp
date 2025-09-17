@@ -1,12 +1,29 @@
 #include <iostream>
-
-#define PROJECT_NAME "MineSweeper"
+#include <objects.h>
+#include <raylib.h>
 
 int main(int argc, char **argv) {
-    if (argc != 1) {
-        std::cout << argv[0] << " takes no arguments.\n";
-        return 1;
-    }
-    std::cout << "This is project " << PROJECT_NAME << ".\n";
+	int side = 15;
+	int width = 25;
+	if(argc == 3){
+		side = std::atoi(argv[1]);
+		width = std::atoi(argv[2]);
+	}
+
+	int windowWidth  = side*width+(2*side)+30;
+	int windowHeight = side*width+(2*side)+50;
+	Interface ui(side, width);
+
+	InitWindow(windowWidth, windowHeight, "Minesooper");
+	while(!WindowShouldClose()){
+		BeginDrawing();
+		ClearBackground(BLACK);
+
+		ui.grid->DrawGrid();
+		ui.grid->UpdateGrid();
+
+		DrawFPS(20, 20);
+		EndDrawing();
+	}
     return 0;
 }

@@ -11,8 +11,11 @@ dependencies = [
   raylib_dep,
 ]
 
+includeDirs = include_directories('include')
+
 src = [
   'src/main.cpp',
+  'src/objects.cpp',
 ]
 
 exe = executable(
@@ -20,6 +23,7 @@ exe = executable(
   src,
   install : true,
   dependencies : dependencies,
+  include_directories : includeDirs,
 )
 
 test('basic', exe)
