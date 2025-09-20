@@ -1,9 +1,15 @@
 #include <raylib.h>
+#include <vector>
 
 enum STATE {
 	REVEALED,
 	HIDDEN,
 	FLAGGED
+};
+
+enum UPDATETYPE {
+	ADD_BOMB,
+	CLEAR
 };
 
 enum TYPE {
@@ -16,6 +22,7 @@ class Square {
 public:
 	STATE state = HIDDEN;
 	TYPE type;
+	int closeBombs = 0;
 
 	Vector2 indexPosition;
 };
@@ -31,6 +38,8 @@ public:
 
 	void DrawGrid();
 	void UpdateGrid();
+	void RevealArea(Vector2, std::vector<Vector2>&);
+	void UpdateGridInfo(Vector2, UPDATETYPE);
 };
 
 class Interface {
