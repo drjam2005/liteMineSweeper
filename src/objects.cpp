@@ -25,7 +25,29 @@ Grid::Grid(int sideCount, int squareWidth){
 			squares[x][y].indexPosition = {(float)x, (float)y};
 		}
 	}
+	
+	Reset();
+}
 
+void Grid::Reset(){
+	firstMove = true;
+	squares = new Square*[sideCount];
+	for (int x = 0; x < sideCount; ++x) {
+		squares[x] = new Square[sideCount];
+	}
+
+	for(int y = 0; y < sideCount; ++y){
+		for(int x = 0; x < sideCount; ++x){
+			squares[x][y].indexPosition = {(float)x, (float)y};
+		}
+	}
+	for(int y = 0; y < sideCount; ++y){
+		for(int x = 0; x < sideCount; ++x){
+			squares[x][y].state = HIDDEN;
+			squares[x][y].type = EMPTY;
+			squares[x][y].closeBombs = 0;
+		}
+	}
 	srand(time(NULL));
 	std::vector<Vector2> passed;
 	for(int r = 0; r < 20; ++r){
@@ -43,20 +65,37 @@ Grid::Grid(int sideCount, int squareWidth){
 void Grid::DrawGrid(){
 	for(int y = 0; y < sideCount; ++y){
 		for(int x = 0; x < sideCount; ++x){
-			Color color = WHITE;
+			Color color = GRAY;
 			if(squares[x][y].state == FLAGGED){
 				color = RED;
 				DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, color);
 			}
 			if(squares[x][y].state == REVEALED){
 				unsigned char red = 30*squares[x][y].closeBombs;
-				color = {red, (unsigned char)(255 - red),0,255};
-				DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, color);
+				DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, WHITE);
 				if(squares[x][y].type == BOMB){
 					DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, RED);
 					DrawText("X", 15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, 20, BLACK);
-				}else if(squares[x][y].closeBombs > 0)
-					DrawText(TextFormat("%s", std::to_string(squares[x][y].closeBombs).c_str()),15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, 20, BLACK);
+				}else if(squares[x][y].closeBombs > 0){
+					int count = squares[x][y].closeBombs;
+					if(count == 1)
+						color = BLUE;
+					if(count == 2)
+						color = DARKGREEN;
+					if(count == 3)
+						color = RED;
+					if(count == 4)
+						color = DARKBLUE;
+					if(count == 5)
+						color = Color{200,0,0,255};
+					if(count == 6)
+						color = Color{200,255,255,255};
+					if(count == 7)
+						color = VIOLET;
+					if(count == 8)
+						color = GRAY;
+					DrawText(TextFormat("%s", std::to_string(squares[x][y].closeBombs).c_str()),15+(x*squareWidth)+2*x+5, 25+(y*squareWidth)+2*y, 20, color);
+				}
 			}else{
 				DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, color);
 			}
@@ -65,31 +104,37 @@ void Grid::DrawGrid(){
 }
 
 void Grid::UpdateGridInfo(Vector2 position, UPDATETYPE type) {
-    if (type != ADD_BOMB) return;
+    if (type == ADD_BOMB || type == REMOVE_BOMB){
+		int x = int(position.x);
+		int y = int(position.y);
 
-    int x = int(position.x);
-    int y = int(position.y);
+		const int dx[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+		const int dy[] = {-1, 0,  1, -1, 1, -1, 0, 1};
 
-    const int dx[] = {-1, -1, -1, 0, 0, 1, 1, 1};
-    const int dy[] = {-1, 0,  1, -1, 1, -1, 0, 1};
+		for (int i = 0; i < 8; ++i) {
+			int nx = x + dx[i];
+			int ny = y + dy[i];
 
-    for (int i = 0; i < 8; ++i) {
-        int nx = x + dx[i];
-        int ny = y + dy[i];
+			if (nx < 0 || ny < 0 || nx >= sideCount || ny >= sideCount)
+				continue;
 
-        if (nx < 0 || ny < 0 || nx >= sideCount || ny >= sideCount)
-            continue;
+			if (squares[nx][ny].type == BOMB) 
+				continue;
 
-        if (squares[nx][ny].type == BOMB) 
-            continue;
-
-        squares[nx][ny].closeBombs++;
+			squares[nx][ny].closeBombs++;
+			if(type == REMOVE_BOMB){
+				squares[nx][ny].closeBombs -= 2;
+			}
+		}
     }
 }
 
 
 
 void Grid::UpdateGrid(){
+	if(IsKeyPressed(KEY_R)){
+		Reset();
+	}
 	Vector2 mPos = GetMousePosition();
 	if(IsMouseButtonPressed(MOUSE_MIDDLE_BUTTON)){
 		for(int y = 0; y < sideCount; ++y){
@@ -99,6 +144,11 @@ void Grid::UpdateGrid(){
 				&& mPos.y > (float)25+y*squareWidth+2*y
 				&& mPos.y < (float)25+y*squareWidth+2*y+squareWidth){
 					selected = Vector2{(float)x, (float)y};
+					if(firstMove){
+						squares[x][y].type = EMPTY;
+						UpdateGridInfo(Vector2{(float)x,(float)y}, REMOVE_BOMB);
+						firstMove = false;
+					}
 					if(squares[x][y].type != BOMB){
 						squares[x][y].type = BOMB;
 						squares[x][y].closeBombs = 0;
@@ -163,6 +213,7 @@ void Grid::RevealArea(Vector2 position, std::vector<Vector2>& passed){
 	if(squares[x][y].type == BOMB) return;
 	if(inVector(passed, position)) return;
 	squares[x][y].state = REVEALED;
+
 	if(squares[x][y].closeBombs > 0){
 		return;
 	}
