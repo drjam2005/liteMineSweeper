@@ -1,6 +1,12 @@
 #include <raylib.h>
 #include <vector>
 
+enum GAME_STATE {
+	PLAYING,
+	WIN,
+	LOSE
+};
+
 enum STATE {
 	REVEALED,
 	HIDDEN,
@@ -29,6 +35,7 @@ public:
 
 
 class Grid {
+	GAME_STATE gameState = PLAYING;
 	Square** squares = nullptr;
 	bool firstMove = true;
 	int sideCount = 0;

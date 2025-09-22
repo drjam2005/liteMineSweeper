@@ -1,6 +1,5 @@
 #include <objects.h>
 #include <string>
-#include <random>
 #include <iostream>
 
 bool inVector(std::vector<Vector2>& vector, Vector2 pos){
@@ -13,6 +12,7 @@ bool inVector(std::vector<Vector2>& vector, Vector2 pos){
 }
 
 Grid::Grid(int sideCount, int squareWidth){
+	gameState = PLAYING;
 	this->squareWidth = squareWidth;
 	this->sideCount = sideCount;
 	squares = new Square*[sideCount];
@@ -30,7 +30,6 @@ Grid::Grid(int sideCount, int squareWidth){
 }
 
 void Grid::Reset(){
-	firstMove = true;
 	squares = new Square*[sideCount];
 	for (int x = 0; x < sideCount; ++x) {
 		squares[x] = new Square[sideCount];
@@ -50,7 +49,7 @@ void Grid::Reset(){
 	}
 	srand(time(NULL));
 	std::vector<Vector2> passed;
-	for(int r = 0; r < 20; ++r){
+	for(int r = 0; r < 30; ++r){
 		int x  = rand() % sideCount;
 		int y  = rand() % sideCount;
 		Vector2 pos  = {float(x), float(y)};
@@ -74,8 +73,8 @@ void Grid::DrawGrid(){
 				unsigned char red = 30*squares[x][y].closeBombs;
 				DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, WHITE);
 				if(squares[x][y].type == BOMB){
-					DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, RED);
-					DrawText("X", 15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, 20, BLACK);
+					DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, WHITE);
+					DrawCircle(15+(x*squareWidth)+2*x+(squareWidth/2), 25+(y*squareWidth)+2*y+(squareWidth/2), squareWidth/2.0f - 2, BLACK);
 				}else if(squares[x][y].closeBombs > 0){
 					int count = squares[x][y].closeBombs;
 					if(count == 1)
@@ -99,7 +98,16 @@ void Grid::DrawGrid(){
 			}else{
 				DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, color);
 			}
+			if(gameState == LOSE){
+				if(squares[x][y].type == BOMB){
+					DrawRectangle(15+(x*squareWidth)+2*x, 25+(y*squareWidth)+2*y, squareWidth, squareWidth, WHITE);
+					DrawCircle(15+(x*squareWidth)+2*x+(squareWidth/2), 25+(y*squareWidth)+2*y+(squareWidth/2), squareWidth/2.0f - 2, BLACK);
+				}
+			}
 		}
+	}
+	if(gameState == LOSE){
+		DrawText("noob...", 200, 200, 50, BLACK);
 	}
 }
 
@@ -122,9 +130,6 @@ void Grid::UpdateGridInfo(Vector2 position, UPDATETYPE type) {
 				continue;
 
 			squares[nx][ny].closeBombs++;
-			if(type == REMOVE_BOMB){
-				squares[nx][ny].closeBombs -= 2;
-			}
 		}
     }
 }
@@ -132,6 +137,7 @@ void Grid::UpdateGridInfo(Vector2 position, UPDATETYPE type) {
 
 
 void Grid::UpdateGrid(){
+	if(gameState == LOSE) return;
 	if(IsKeyPressed(KEY_R)){
 		Reset();
 	}
@@ -144,11 +150,6 @@ void Grid::UpdateGrid(){
 				&& mPos.y > (float)25+y*squareWidth+2*y
 				&& mPos.y < (float)25+y*squareWidth+2*y+squareWidth){
 					selected = Vector2{(float)x, (float)y};
-					if(firstMove){
-						squares[x][y].type = EMPTY;
-						UpdateGridInfo(Vector2{(float)x,(float)y}, REMOVE_BOMB);
-						firstMove = false;
-					}
 					if(squares[x][y].type != BOMB){
 						squares[x][y].type = BOMB;
 						squares[x][y].closeBombs = 0;
@@ -167,6 +168,9 @@ void Grid::UpdateGrid(){
 				&& mPos.y > (float)25+y*squareWidth+2*y
 				&& mPos.y < (float)25+y*squareWidth+2*y+squareWidth){
 					selected = Vector2{(float)x, (float)y};
+					if(squares[x][y].type == BOMB && squares[x][y].state != FLAGGED){
+						gameState = LOSE;
+					}
 					if(squares[x][y].state == HIDDEN){
 						squares[x][y].state = REVEALED;
 						std::vector<Vector2> passed;
